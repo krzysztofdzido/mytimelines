@@ -8,9 +8,9 @@
 .timeline-vertical {
   border-left: 3px solid #888;
   padding-left: 1rem;
-  min-height: 300px;
   position: relative;
   width: 250px;
+  background: white;
 }
 
 .timeline h3 {
@@ -22,30 +22,36 @@
   top: 0;
   left: 0;
   right: 0;
+  bottom: 0;
   pointer-events: none;
 }
 
-.timeline-day {
-  height: 40px;
-  border-bottom: 1px solid #e0e0e0;
+.timeline-slot {
+  border-bottom: 1px solid #f0f0f0;
   position: relative;
   pointer-events: all;
   cursor: crosshair;
-  transition: background-color 0.2s;
+  transition: background-color 0.15s;
 }
 
-.timeline-day:hover {
+.timeline-slot.hour-start {
+  border-bottom: 1px solid #d0d0d0;
+}
+
+.timeline-slot:hover {
   background-color: rgba(230, 126, 34, 0.05);
 }
 
-.day-label {
+.timeline-hour-label {
   position: absolute;
-  left: -30px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.75em;
-  color: #888;
-  font-weight: bold;
+  left: -45px;
+  top: -1px;
+  font-size: 0.7em;
+  color: #666;
+  font-weight: 600;
+  pointer-events: all;
+  width: 40px;
+  text-align: right;
 }
 
 .task-preview {
@@ -60,6 +66,20 @@
   justify-content: center;
   color: #1976d2;
   font-weight: bold;
+  font-size: 0.85em;
   pointer-events: none;
   z-index: 100;
+}
+
+.empty-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #aaa;
+  font-style: italic;
+  padding: 1rem;
+  text-align: center;
+  pointer-events: none;
+  width: 200px;
 }

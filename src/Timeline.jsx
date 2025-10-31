@@ -15,27 +15,46 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskCrea
     return taskEnd >= range.start && taskStart < range.end;
   });
 
-  // Generate calendar grid days within the visible range
-  const getDaysInRange = () => {
-    const days = [];
-    const current = new Date(range.start);
-    while (current < range.end) {
-      days.push(new Date(current));
-      current.setDate(current.getDate() + 1);
+  // Generate time slots starting from 8 AM to midnight (08:00 to 23:45 in 15-minute increments)
+  const getTimeSlots = () => {
+    const slots = [];
+    for (let hour = 8; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        slots.push({ hour, minute });
+      }
     }
-    return days;
+    return slots;
   };
 
-  const days = getDaysInRange();
+  const timeSlots = getTimeSlots();
+  const SLOT_HEIGHT = 20; // pixels per 15-minute slot
+
+  // Get the current visible day (use first day of range)
+  const currentDay = new Date(range.start);
+
+  const formatTime = (hour, minute) => {
+    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+  };
+
+  const getDateTimeFromSlot = (slotIndex) => {
+    const slot = timeSlots[slotIndex];
+    if (!slot) return null;
+
+    const date = new Date(currentDay);
+    date.setHours(slot.hour, slot.minute, 0, 0);
+    return date;
+  };
 
   const handleTimelineMouseDown = (e) => {
-    if (e.target.classList.contains('timeline-day')) {
-      const dayIndex = parseInt(e.target.dataset.dayIndex);
-      const date = days[dayIndex];
-      setDragStart(date);
-      setDragEnd(date);
-      setCreating(true);
-      e.preventDefault();
+    if (e.target.classList.contains('timeline-slot') || e.target.classList.contains('timeline-hour-label')) {
+      const slotIndex = parseInt(e.target.dataset.slotIndex);
+      const datetime = getDateTimeFromSlot(slotIndex);
+      if (datetime) {
+        setDragStart(datetime);
+        setDragEnd(datetime);
+        setCreating(true);
+        e.preventDefault();
+      }
     }
   };
 
@@ -43,9 +62,10 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskCrea
     if (creating && timelineRef.current) {
       const rect = timelineRef.current.getBoundingClientRect();
       const y = e.clientY - rect.top;
-      const dayIndex = Math.floor(y / 40); // 40px per day
-      if (dayIndex >= 0 && dayIndex < days.length) {
-        setDragEnd(days[dayIndex]);
+      const slotIndex = Math.floor(y / SLOT_HEIGHT);
+      const datetime = getDateTimeFromSlot(slotIndex);
+      if (datetime) {
+        setDragEnd(datetime);
       }
     }
   };
@@ -55,12 +75,16 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskCrea
       const start = dragStart < dragEnd ? dragStart : dragEnd;
       const end = dragStart < dragEnd ? dragEnd : dragStart;
 
+      // Add 15 minutes to end time to make it inclusive
+      const endPlusSlot = new Date(end);
+      endPlusSlot.setMinutes(endPlusSlot.getMinutes() + 15);
+
       const title = prompt("Enter meeting/task title:");
       if (title && title.trim()) {
         onTaskCreate && onTaskCreate(timelineId, {
           title: title.trim(),
-          startDate: start.toISOString().slice(0, 10),
-          endDate: end.toISOString().slice(0, 10),
+          startDate: start.toISOString(),
+          endDate: endPlusSlot.toISOString(),
           assignedTo: person,
           status: "pending"
         });
@@ -78,6 +102,26 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskCrea
     }
   }, [creating, dragStart, dragEnd]);
 
+  const getSlotIndexFromDateTime = (datetime) => {
+    const hour = datetime.getHours();
+    const minute = datetime.getMinutes();
+    const slotMinute = Math.floor(minute / 15) * 15;
+    // Adjust for 8 AM start: hour 8 becomes slot 0
+    return (hour - 8) * 4 + slotMinute / 15;
+  };
+
+  const getPreviewStyle = () => {
+    if (!creating || !dragStart || !dragEnd) return null;
+
+    const startSlot = getSlotIndexFromDateTime(dragStart < dragEnd ? dragStart : dragEnd);
+    const endSlot = getSlotIndexFromDateTime(dragStart < dragEnd ? dragEnd : dragStart);
+
+    return {
+      top: startSlot * SLOT_HEIGHT,
+      height: (endSlot - startSlot + 1) * SLOT_HEIGHT
+    };
+  };
+
   return (
     <div className="timeline">
       <h3>{name}</h3>
@@ -86,17 +130,23 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskCrea
         ref={timelineRef}
         onMouseDown={handleTimelineMouseDown}
         onMouseMove={handleTimelineMouseMove}
+        style={{ minHeight: timeSlots.length * SLOT_HEIGHT }}
       >
-        {/* Calendar grid background */}
+        {/* Time slot grid background */}
         <div className="timeline-grid">
-          {days.map((day, index) => (
+          {timeSlots.map((slot, index) => (
             <div
               key={index}
-              className="timeline-day"
-              data-day-index={index}
-              title={`${day.toLocaleDateString()} - Click and drag to create meeting`}
+              className={`timeline-slot ${slot.minute === 0 ? 'hour-start' : ''}`}
+              data-slot-index={index}
+              style={{ height: SLOT_HEIGHT }}
+              title={`${formatTime(slot.hour, slot.minute)} - Click and drag to create meeting`}
             >
-              <span className="day-label">{day.getDate()}</span>
+              {slot.minute === 0 && (
+                <span className="timeline-hour-label" data-slot-index={index}>
+                  {formatTime(slot.hour, slot.minute)}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -105,10 +155,7 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskCrea
         {creating && dragStart && dragEnd && (
           <div
             className="task-preview"
-            style={{
-              top: Math.min(days.indexOf(dragStart), days.indexOf(dragEnd)) * 40,
-              height: (Math.abs(days.indexOf(dragEnd) - days.indexOf(dragStart)) + 1) * 40
-            }}
+            style={getPreviewStyle()}
           >
             Creating meeting...
           </div>
@@ -116,7 +163,7 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskCrea
 
         {/* Existing tasks */}
         {filteredTasks.length === 0 && !creating ? (
-          <div style={{ color: '#aaa', fontStyle: 'italic', padding: '1rem' }}>
+          <div className="empty-message">
             No tasks in this range. Click and drag to create a meeting.
           </div>
         ) : (
@@ -127,6 +174,8 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskCrea
               person={person}
               onDurationChange={onTaskDurationChange}
               onDelete={onTaskDelete ? () => onTaskDelete(timelineId, task.id) : null}
+              slotHeight={SLOT_HEIGHT}
+              currentDay={currentDay}
             />
           ))
         )}
