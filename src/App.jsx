@@ -166,6 +166,21 @@ function App() {
 		);
 	};
 
+	const onTaskStartTimeChange = (timelineId, taskId, newStartDate, newEndDate) => {
+		setTimelines((prevTimelines) =>
+			prevTimelines.map((timeline) =>
+				timeline.id === timelineId
+					? {
+						...timeline,
+						tasks: timeline.tasks.map((task) =>
+							task.id === taskId ? { ...task, startDate: newStartDate, endDate: newEndDate } : task
+						),
+					}
+					: timeline
+			)
+		);
+	};
+
 	const onTaskCreate = (timelineId, newTask) => {
 		setTimelines((prevTimelines) =>
 			prevTimelines.map((timeline) =>
@@ -267,6 +282,7 @@ function App() {
 						person={person}
 						range={{ start, end }}
 						onTaskDurationChange={(taskId, newEndDate) => onTaskDurationChange(timeline.id, taskId, newEndDate)}
+						onTaskStartTimeChange={(taskId, newStartDate, newEndDate) => onTaskStartTimeChange(timeline.id, taskId, newStartDate, newEndDate)}
 						onTaskCreate={onTaskCreate}
 						onTaskDelete={onTaskDelete}
 					/>

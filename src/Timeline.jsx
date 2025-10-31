@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Task from "./Task";
 import "./Timeline.css";
 
-const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskCreate, onTaskDelete, timelineId }) => {
+const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskStartTimeChange, onTaskCreate, onTaskDelete, timelineId }) => {
   const [creating, setCreating] = useState(false);
   const [dragStart, setDragStart] = useState(null);
   const [dragEnd, setDragEnd] = useState(null);
@@ -173,6 +173,7 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskCrea
               task={task}
               person={person}
               onDurationChange={onTaskDurationChange}
+              onStartTimeChange={onTaskStartTimeChange}
               onDelete={onTaskDelete ? () => onTaskDelete(timelineId, task.id) : null}
               slotHeight={SLOT_HEIGHT}
               currentDay={currentDay}

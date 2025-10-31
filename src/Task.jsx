@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./Task.css";
 
-const Task = ({ task, person, onDurationChange, onDelete, slotHeight }) => {
+const Task = ({ task, person, onDurationChange, onDelete, onStartTimeChange, slotHeight }) => {
   const isPending = task.assignedTo === person && task.status === "pending";
-  const [dragging, setDragging] = useState(false);
+  const [draggingResize, setDraggingResize] = useState(false);
+  const [draggingMove, setDraggingMove] = useState(false);
+  const [dragStartY, setDragStartY] = useState(0);
   const cardRef = useRef();
 
   const startDate = new Date(task.startDate);
@@ -46,15 +48,32 @@ const Task = ({ task, person, onDurationChange, onDelete, slotHeight }) => {
     }
   };
 
-  const handleMouseDown = (e) => {
+  // Handle dragging the resize handle (bottom)
+  const handleResizeMouseDown = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragging(true);
+    setDraggingResize(true);
     document.body.style.userSelect = "none";
   };
 
+  // Handle dragging the entire task card (move)
+  const handleMoveMouseDown = (e) => {
+    // Don't start move if clicking delete button or resize handle
+    if (e.target.classList.contains('task-delete') ||
+        e.target.classList.contains('task-resize-handle')) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingMove(true);
+    setDragStartY(e.clientY);
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "grabbing";
+  };
+
+  // Effect for resize dragging
   useEffect(() => {
-    if (!dragging) return;
+    if (!draggingResize) return;
 
     const onMouseMove = (e) => {
       if (!cardRef.current) return;
@@ -74,7 +93,7 @@ const Task = ({ task, person, onDurationChange, onDelete, slotHeight }) => {
     };
 
     const onMouseUp = () => {
-      setDragging(false);
+      setDraggingResize(false);
       document.body.style.userSelect = "";
     };
 
@@ -85,11 +104,49 @@ const Task = ({ task, person, onDurationChange, onDelete, slotHeight }) => {
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [dragging, onDurationChange, endDate, startDate, task.id, slotHeight]);
+  }, [draggingResize, onDurationChange, endDate, startDate, task.id, slotHeight]);
+
+  // Effect for move dragging
+  useEffect(() => {
+    if (!draggingMove) return;
+
+    const onMouseMove = (e) => {
+      const deltaPx = e.clientY - dragStartY;
+      const slotsDelta = Math.round(deltaPx / slotHeight);
+
+      if (slotsDelta !== 0) {
+        const newStart = new Date(startDate);
+        newStart.setMinutes(newStart.getMinutes() + (slotsDelta * 15));
+
+        const newEnd = new Date(endDate);
+        newEnd.setMinutes(newEnd.getMinutes() + (slotsDelta * 15));
+
+        // Ensure times are within valid range (8 AM to midnight)
+        if (newStart.getHours() >= 8 && newEnd.getHours() < 24) {
+          onStartTimeChange && onStartTimeChange(task.id, newStart.toISOString(), newEnd.toISOString());
+          setDragStartY(e.clientY);
+        }
+      }
+    };
+
+    const onMouseUp = () => {
+      setDraggingMove(false);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [draggingMove, dragStartY, onStartTimeChange, startDate, endDate, task.id, slotHeight]);
 
   return (
     <div
-      className={`task${isPending ? " pending" : ""}`}
+      className={`task${isPending ? " pending" : ""}${draggingMove ? " dragging-move" : ""}`}
       ref={cardRef}
       style={{
         height: cardHeight,
@@ -97,8 +154,10 @@ const Task = ({ task, person, onDurationChange, onDelete, slotHeight }) => {
         top: cardTop,
         left: 0,
         right: 0,
-        zIndex: 10
+        zIndex: draggingMove ? 100 : 10,
+        cursor: draggingMove ? 'grabbing' : 'grab'
       }}
+      onMouseDown={handleMoveMouseDown}
     >
       <div className="task-header">
         <div className="task-title">{task.title}</div>
@@ -127,7 +186,7 @@ const Task = ({ task, person, onDurationChange, onDelete, slotHeight }) => {
       </div>
       <div
         className="task-resize-handle"
-        onMouseDown={handleMouseDown}
+        onMouseDown={handleResizeMouseDown}
         title="Drag to change duration"
       />
     </div>
