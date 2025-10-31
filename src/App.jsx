@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Timeline from "./Timeline";
 import "./App.css";
 
-const timelinesData = [
+const STORAGE_KEY = "mytimelines_data";
+
+const defaultTimelinesData = [
 	{
 		id: 1,
 		name: "Project Alpha",
@@ -12,21 +14,24 @@ const timelinesData = [
 				title: "Design UI",
 				assignedTo: "Alice",
 				status: "pending",
-				date: "2025-10-01",
+				startDate: "2025-10-01",
+				endDate: "2025-10-03",
 			},
 			{
 				id: 2,
 				title: "Setup Backend",
 				assignedTo: "Bob",
 				status: "completed",
-				date: "2025-10-02",
+				startDate: "2025-10-02",
+				endDate: "2025-10-05",
 			},
 			{
 				id: 3,
 				title: "Write Docs",
 				assignedTo: "Alice",
 				status: "pending",
-				date: "2025-10-03",
+				startDate: "2025-10-04",
+				endDate: "2025-10-06",
 			},
 		],
 	},
@@ -39,21 +44,24 @@ const timelinesData = [
 				title: "Initial Planning",
 				assignedTo: "Charlie",
 				status: "completed",
-				date: "2025-10-01",
+				startDate: "2025-10-01",
+				endDate: "2025-10-02",
 			},
 			{
 				id: 5,
 				title: "API Integration",
 				assignedTo: "Alice",
 				status: "pending",
-				date: "2025-10-04",
+				startDate: "2025-10-04",
+				endDate: "2025-10-08",
 			},
 			{
 				id: 6,
 				title: "Testing",
 				assignedTo: "Alice",
 				status: "completed",
-				date: "2025-10-05",
+				startDate: "2025-10-07",
+				endDate: "2025-10-09",
 			},
 		],
 	},
@@ -66,14 +74,16 @@ const timelinesData = [
 				title: "Kickoff Meeting",
 				assignedTo: "Bob",
 				status: "completed",
-				date: "2025-10-01",
+				startDate: "2025-10-01",
+				endDate: "2025-10-01",
 			},
 			{
 				id: 8,
 				title: "Feature X",
 				assignedTo: "Alice",
 				status: "pending",
-				date: "2025-10-06",
+				startDate: "2025-10-06",
+				endDate: "2025-10-12",
 			},
 		],
 	},
@@ -114,14 +124,94 @@ function getCurrentRangeDates(range, startDate) {
 }
 
 function App() {
-	const todayStr = new Date().toISOString().slice(0, 10);
 	const [range, setRange] = useState("month");
-	const [startDate, setStartDate] = useState(todayStr);
+	const [startDate, setStartDate] = useState("2025-10-01");
+
+	// Initialize timelines from localStorage or use defaults
+	const [timelines, setTimelines] = useState(() => {
+		try {
+			const stored = localStorage.getItem(STORAGE_KEY);
+			if (stored) {
+				return JSON.parse(stored);
+			}
+		} catch (error) {
+			console.error("Error loading from localStorage:", error);
+		}
+		return defaultTimelinesData;
+	});
+
 	const { start, end } = getCurrentRangeDates(range, startDate);
+
+	// Save to localStorage whenever timelines change
+	useEffect(() => {
+		try {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(timelines));
+		} catch (error) {
+			console.error("Error saving to localStorage:", error);
+		}
+	}, [timelines]);
+
+	const onTaskDurationChange = (timelineId, taskId, newEndDate) => {
+		setTimelines((prevTimelines) =>
+			prevTimelines.map((timeline) =>
+				timeline.id === timelineId
+					? {
+						...timeline,
+						tasks: timeline.tasks.map((task) =>
+							task.id === taskId ? { ...task, endDate: newEndDate } : task
+						),
+					}
+					: timeline
+			)
+		);
+	};
+
+	const onTaskCreate = (timelineId, newTask) => {
+		setTimelines((prevTimelines) =>
+			prevTimelines.map((timeline) =>
+				timeline.id === timelineId
+					? {
+						...timeline,
+						tasks: [
+							...timeline.tasks,
+							{
+								...newTask,
+								id: Date.now(), // Simple ID generation
+							},
+						],
+					}
+					: timeline
+			)
+		);
+	};
+
+	const onTaskDelete = (timelineId, taskId) => {
+		if (confirm("Are you sure you want to delete this task?")) {
+			setTimelines((prevTimelines) =>
+				prevTimelines.map((timeline) =>
+					timeline.id === timelineId
+						? {
+							...timeline,
+							tasks: timeline.tasks.filter((task) => task.id !== taskId),
+						}
+						: timeline
+				)
+			);
+		}
+	};
+
+	const resetToDefaults = () => {
+		if (confirm("Are you sure you want to reset all data to defaults? This cannot be undone.")) {
+			setTimelines(defaultTimelinesData);
+		}
+	};
 
 	return (
 		<div>
-			<h1>Timelines - Pending Tasks for {person}</h1>
+			<h1>Calendar Timeline - Pending Tasks for {person}</h1>
+			<p style={{ textAlign: 'center', color: '#666', fontSize: '0.9em' }}>
+				Click and drag on the calendar grid to create meetings/tasks
+			</p>
 			<div style={{ marginBottom: "1rem" }}>
 				<label style={{ marginRight: 12 }}>
 					Start date:
@@ -145,6 +235,20 @@ function App() {
 						{opt.charAt(0).toUpperCase() + opt.slice(1)}
 					</button>
 				))}
+				<button
+					onClick={resetToDefaults}
+					style={{
+						marginLeft: 16,
+						padding: "4px 12px",
+						background: "#ff6b6b",
+						color: "white",
+						border: "none",
+						borderRadius: "4px",
+						cursor: "pointer",
+					}}
+				>
+					Reset to Defaults
+				</button>
 			</div>
 			<div
 				style={{
@@ -154,13 +258,17 @@ function App() {
 					marginTop: "2rem",
 				}}
 			>
-				{timelinesData.map((timeline) => (
+				{timelines.map((timeline) => (
 					<Timeline
 						key={timeline.id}
+						timelineId={timeline.id}
 						name={timeline.name}
 						tasks={timeline.tasks}
 						person={person}
 						range={{ start, end }}
+						onTaskDurationChange={(taskId, newEndDate) => onTaskDurationChange(timeline.id, taskId, newEndDate)}
+						onTaskCreate={onTaskCreate}
+						onTaskDelete={onTaskDelete}
 					/>
 				))}
 			</div>
@@ -169,3 +277,4 @@ function App() {
 }
 
 export default App;
+

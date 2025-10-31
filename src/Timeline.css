@@ -9,9 +9,57 @@
   border-left: 3px solid #888;
   padding-left: 1rem;
   min-height: 300px;
+  position: relative;
+  width: 250px;
 }
 
 .timeline h3 {
   margin-bottom: 1rem;
 }
 
+.timeline-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.timeline-day {
+  height: 40px;
+  border-bottom: 1px solid #e0e0e0;
+  position: relative;
+  pointer-events: all;
+  cursor: crosshair;
+  transition: background-color 0.2s;
+}
+
+.timeline-day:hover {
+  background-color: rgba(230, 126, 34, 0.05);
+}
+
+.day-label {
+  position: absolute;
+  left: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75em;
+  color: #888;
+  font-weight: bold;
+}
+
+.task-preview {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(100, 181, 246, 0.3);
+  border: 2px dashed #64b5f6;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1976d2;
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 100;
+}
