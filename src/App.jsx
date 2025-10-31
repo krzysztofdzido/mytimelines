@@ -126,6 +126,7 @@ function getCurrentRangeDates(range, startDate) {
 function App() {
 	const [range, setRange] = useState("day");
 	const [startDate, setStartDate] = useState("2025-10-01");
+	const timelinesContainerRef = React.useRef(null);
 
 	// Initialize timelines from localStorage or use defaults
 	const [timelines, setTimelines] = useState(() => {
@@ -215,6 +216,48 @@ function App() {
 		}
 	};
 
+	const onAddTimeline = () => {
+		const name = prompt("Enter timeline name:");
+		if (name && name.trim()) {
+			const newTimeline = {
+				id: Date.now(),
+				name: name.trim(),
+				tasks: []
+			};
+			setTimelines((prevTimelines) => [...prevTimelines, newTimeline]);
+
+			// Scroll to the right to show the new timeline
+			setTimeout(() => {
+				if (timelinesContainerRef.current) {
+					timelinesContainerRef.current.scrollTo({
+						left: timelinesContainerRef.current.scrollWidth,
+						behavior: 'smooth'
+					});
+				}
+			}, 100);
+		}
+	};
+
+	const onDeleteTimeline = (timelineId) => {
+		if (confirm("Are you sure you want to delete this timeline? All tasks will be lost.")) {
+			setTimelines((prevTimelines) => prevTimelines.filter((timeline) => timeline.id !== timelineId));
+		}
+	};
+
+	const onRenameTimeline = (timelineId) => {
+		const timeline = timelines.find((t) => t.id === timelineId);
+		if (!timeline) return;
+
+		const newName = prompt("Enter new timeline name:", timeline.name);
+		if (newName && newName.trim()) {
+			setTimelines((prevTimelines) =>
+				prevTimelines.map((t) =>
+					t.id === timelineId ? { ...t, name: newName.trim() } : t
+				)
+			);
+		}
+	};
+
 	const resetToDefaults = () => {
 		if (confirm("Are you sure you want to reset all data to defaults? This cannot be undone.")) {
 			setTimelines(defaultTimelinesData);
@@ -225,7 +268,7 @@ function App() {
 		<div>
 			<h1>Calendar Timeline - Pending Tasks for {person}</h1>
 			<p style={{ textAlign: 'center', color: '#666', fontSize: '0.9em' }}>
-				Click and drag on the calendar grid to create meetings/tasks
+				Click and drag on the calendar grid to create meetings/tasks. Drag tasks to move them.
 			</p>
 			<div style={{ marginBottom: "1rem" }}>
 				<label style={{ marginRight: 12 }}>
@@ -251,9 +294,23 @@ function App() {
 					</button>
 				))}
 				<button
-					onClick={resetToDefaults}
+					onClick={onAddTimeline}
 					style={{
 						marginLeft: 16,
+						padding: "4px 12px",
+						background: "#4CAF50",
+						color: "white",
+						border: "none",
+						borderRadius: "4px",
+						cursor: "pointer",
+					}}
+				>
+					+ Add Timeline
+				</button>
+				<button
+					onClick={resetToDefaults}
+					style={{
+						marginLeft: 8,
 						padding: "4px 12px",
 						background: "#ff6b6b",
 						color: "white",
@@ -266,11 +323,15 @@ function App() {
 				</button>
 			</div>
 			<div
+				ref={timelinesContainerRef}
 				style={{
 					display: "flex",
-					justifyContent: "center",
+					justifyContent: "flex-start",
 					gap: "2rem",
 					marginTop: "2rem",
+					overflowX: "auto",
+					overflowY: "hidden",
+					paddingBottom: "1rem",
 				}}
 			>
 				{timelines.map((timeline) => (
@@ -285,6 +346,8 @@ function App() {
 						onTaskStartTimeChange={(taskId, newStartDate, newEndDate) => onTaskStartTimeChange(timeline.id, taskId, newStartDate, newEndDate)}
 						onTaskCreate={onTaskCreate}
 						onTaskDelete={onTaskDelete}
+						onDeleteTimeline={() => onDeleteTimeline(timeline.id)}
+						onRenameTimeline={() => onRenameTimeline(timeline.id)}
 					/>
 				))}
 			</div>
