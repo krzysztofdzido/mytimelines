@@ -83,28 +83,28 @@ const person = "Alice";
 
 const RANGE_OPTIONS = ["day", "week", "month", "year"];
 
-function getCurrentRangeDates(range) {
-	const now = new Date();
+function getCurrentRangeDates(range, startDate) {
+	const base = new Date(startDate);
 	let start, end;
 	switch (range) {
 		case "day":
-			start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+			start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
 			end = new Date(start);
 			end.setDate(end.getDate() + 1);
 			break;
 		case "week":
-			start = new Date(now);
-			start.setDate(now.getDate() - now.getDay()); // Sunday
+			start = new Date(base);
+			start.setDate(base.getDate() - base.getDay()); // Sunday
 			end = new Date(start);
 			end.setDate(end.getDate() + 7);
 			break;
 		case "month":
-			start = new Date(now.getFullYear(), now.getMonth(), 1);
-			end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+			start = new Date(base.getFullYear(), base.getMonth(), 1);
+			end = new Date(base.getFullYear(), base.getMonth() + 1, 1);
 			break;
 		case "year":
-			start = new Date(now.getFullYear(), 0, 1);
-			end = new Date(now.getFullYear() + 1, 0, 1);
+			start = new Date(base.getFullYear(), 0, 1);
+			end = new Date(base.getFullYear() + 1, 0, 1);
 			break;
 		default:
 			start = new Date(0);
@@ -114,13 +114,24 @@ function getCurrentRangeDates(range) {
 }
 
 function App() {
+	const todayStr = new Date().toISOString().slice(0, 10);
 	const [range, setRange] = useState("month");
-	const { start, end } = getCurrentRangeDates(range);
+	const [startDate, setStartDate] = useState(todayStr);
+	const { start, end } = getCurrentRangeDates(range, startDate);
 
 	return (
 		<div>
 			<h1>Timelines - Pending Tasks for {person}</h1>
 			<div style={{ marginBottom: "1rem" }}>
+				<label style={{ marginRight: 12 }}>
+					Start date:
+					<input
+						type="date"
+						value={startDate}
+						onChange={(e) => setStartDate(e.target.value)}
+						style={{ marginLeft: 8 }}
+					/>
+				</label>
 				{RANGE_OPTIONS.map((opt) => (
 					<button
 						key={opt}
