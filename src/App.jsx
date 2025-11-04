@@ -264,6 +264,18 @@ function App() {
 		}
 	};
 
+	const goToPreviousDay = () => {
+		const date = new Date(startDate);
+		date.setDate(date.getDate() - 1);
+		setStartDate(date.toISOString().split('T')[0]);
+	};
+
+	const goToNextDay = () => {
+		const date = new Date(startDate);
+		date.setDate(date.getDate() + 1);
+		setStartDate(date.toISOString().split('T')[0]);
+	};
+
 	return (
 		<div>
 			<h1>Calendar Timeline - Pending Tasks for {person}</h1>
@@ -271,8 +283,17 @@ function App() {
 				Click and drag on the calendar grid to create meetings/tasks. Drag tasks to move them.
 			</p>
 			<div style={{ marginBottom: "1rem" }}>
-				<label style={{ marginRight: 12 }}>
-					Start date:
+				<button
+					onClick={goToPreviousDay}
+					style={{
+						marginRight: 8,
+						padding: "4px 12px",
+						cursor: "pointer",
+					}}
+				>
+					← Previous Day
+				</button>
+				<label style={{ marginRight: 8 }}>
 					<input
 						type="date"
 						value={startDate}
@@ -280,6 +301,16 @@ function App() {
 						style={{ marginLeft: 8 }}
 					/>
 				</label>
+				<button
+					onClick={goToNextDay}
+					style={{
+						marginRight: 12,
+						padding: "4px 12px",
+						cursor: "pointer",
+					}}
+				>
+					Next Day →
+				</button>
 				{RANGE_OPTIONS.map((opt) => (
 					<button
 						key={opt}
