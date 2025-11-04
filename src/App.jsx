@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Timeline from "./Timeline";
 import "./App.css";
 
@@ -124,8 +124,23 @@ function getCurrentRangeDates(range, startDate) {
 }
 
 function App() {
-	const [range, setRange] = useState("day");
-	const [startDate, setStartDate] = useState("2025-10-01");
+	// Initialize from URL parameters if available
+	const [range, setRange] = useState(() => {
+		const params = new URLSearchParams(window.location.search);
+		const urlRange = params.get('range');
+		return RANGE_OPTIONS.includes(urlRange) ? urlRange : "day";
+	});
+
+	const [startDate, setStartDate] = useState(() => {
+		const params = new URLSearchParams(window.location.search);
+		const urlDate = params.get('date');
+		// Validate date format
+		if (urlDate && /^\d{4}-\d{2}-\d{2}$/.test(urlDate)) {
+			return urlDate;
+		}
+		return "2025-10-01";
+	});
+
 	const timelinesContainerRef = React.useRef(null);
 
 	// Initialize timelines from localStorage or use defaults
@@ -141,7 +156,16 @@ function App() {
 		return defaultTimelinesData;
 	});
 
-	const { start, end } = getCurrentRangeDates(range, startDate);
+	const { start, end } = useMemo(() => getCurrentRangeDates(range, startDate), [range, startDate]);
+
+	// Update URL when date or range changes
+	useEffect(() => {
+		const params = new URLSearchParams();
+		params.set('date', startDate);
+		params.set('range', range);
+		const newUrl = `${window.location.pathname}?${params.toString()}`;
+		window.history.pushState({}, '', newUrl);
+	}, [startDate, range]);
 
 	// Save to localStorage whenever timelines change
 	useEffect(() => {
@@ -261,6 +285,7 @@ function App() {
 	const resetToDefaults = () => {
 		if (confirm("Are you sure you want to reset all data to defaults? This cannot be undone.")) {
 			setTimelines(defaultTimelinesData);
+			setStartDate("2025-10-01");
 		}
 	};
 
@@ -276,6 +301,11 @@ function App() {
 		setStartDate(date.toISOString().split('T')[0]);
 	};
 
+	const goToToday = () => {
+		const today = new Date();
+		setStartDate(today.toISOString().split('T')[0]);
+	};
+
 	return (
 		<div>
 			<h1>Calendar Timeline - Pending Tasks for {person}</h1>
@@ -283,6 +313,20 @@ function App() {
 				Click and drag on the calendar grid to create meetings/tasks. Drag tasks to move them.
 			</p>
 			<div style={{ marginBottom: "1rem" }}>
+				<button
+					onClick={goToToday}
+					style={{
+						marginRight: 8,
+						padding: "4px 12px",
+						cursor: "pointer",
+						background: "#2196F3",
+						color: "white",
+						border: "none",
+						borderRadius: "4px",
+					}}
+				>
+					Today
+				</button>
 				<button
 					onClick={goToPreviousDay}
 					style={{
@@ -298,7 +342,6 @@ function App() {
 						type="date"
 						value={startDate}
 						onChange={(e) => setStartDate(e.target.value)}
-						style={{ marginLeft: 8 }}
 					/>
 				</label>
 				<button
