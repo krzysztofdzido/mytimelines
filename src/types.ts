@@ -11,6 +11,13 @@ export interface Timeline {
   id: number;
   name: string;
   tasks: Task[];
+  groupId?: number; // Optional group ID
+}
+
+export interface TimelineGroup {
+  id: number;
+  name: string;
+  isExpanded: boolean;
 }
 
 export type RangeOption = "day" | "week" | "month" | "year";
@@ -24,4 +31,3 @@ export interface TimeSlot {
   hour: number;
   minute: number;
 }
-

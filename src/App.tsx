@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import Timeline from "./Timeline";
 import Sidebar from "./Sidebar";
-import { Timeline as TimelineType, Task, RangeOption, DateRange } from "./types";
+import { Timeline as TimelineType, Task, RangeOption, DateRange, TimelineGroup } from "./types";
 import "./App.css";
 
 const STORAGE_KEY = "mytimelines_data";
+const GROUPS_STORAGE_KEY = "mytimelines_groups";
 
 const defaultTimelinesData: TimelineType[] = [
 	{
@@ -158,9 +159,27 @@ function App() {
 		return defaultTimelinesData;
 	});
 
+	// Initialize groups from localStorage
+	const [groups, setGroups] = useState<TimelineGroup[]>(() => {
+		try {
+			const stored = localStorage.getItem(GROUPS_STORAGE_KEY);
+			if (stored) {
+				return JSON.parse(stored);
+			}
+		} catch (error) {
+			console.error("Error loading groups from localStorage:", error);
+		}
+		return [];
+	});
+
 	// Track which timelines are visible (all visible by default)
 	const [visibleTimelineIds, setVisibleTimelineIds] = useState<Set<number>>(() => {
 		return new Set(timelines.map(t => t.id));
+	});
+
+	// Track which groups are visible (all visible by default)
+	const [visibleGroupIds, setVisibleGroupIds] = useState<Set<number>>(() => {
+		return new Set(groups.map(g => g.id));
 	});
 
 	// Track sidebar width
@@ -183,6 +202,21 @@ function App() {
 		});
 	}, [timelines.length, timelines.map(t => t.id).sort((a, b) => a - b).join(',')]);
 
+	// Update visible groups when groups are added
+	useEffect(() => {
+		setVisibleGroupIds(prev => {
+			const newSet = new Set(prev);
+			let hasChanges = false;
+			groups.forEach(g => {
+				if (!newSet.has(g.id)) {
+					newSet.add(g.id);
+					hasChanges = true;
+				}
+			});
+			return hasChanges ? newSet : prev;
+		});
+	}, [groups.length, groups.map(g => g.id).sort((a, b) => a - b).join(',')]);
+
 	const { start, end } = useMemo(() => getCurrentRangeDates(range, startDate), [range, startDate]);
 
 	// Update URL when date or range changes
@@ -202,6 +236,15 @@ function App() {
 			console.error("Error saving to localStorage:", error);
 		}
 	}, [timelines]);
+
+	// Save groups to localStorage whenever groups change
+	useEffect(() => {
+		try {
+			localStorage.setItem(GROUPS_STORAGE_KEY, JSON.stringify(groups));
+		} catch (error) {
+			console.error("Error saving groups to localStorage:", error);
+		}
+	}, [groups]);
 
 	// Handle sidebar resize
 	useEffect(() => {
@@ -317,6 +360,18 @@ function App() {
 		}
 	};
 
+	const onAddGroup = () => {
+		const name = prompt("Enter group name:");
+		if (name && name.trim()) {
+			const newGroup: TimelineGroup = {
+				id: Date.now(),
+				name: name.trim(),
+				isExpanded: true
+			};
+			setGroups((prevGroups) => [...prevGroups, newGroup]);
+		}
+	};
+
 	const onDeleteTimeline = (timelineId: number) => {
 		if (confirm("Are you sure you want to delete this timeline? All tasks will be lost.")) {
 			setTimelines((prevTimelines) => prevTimelines.filter((timeline) => timeline.id !== timelineId));
@@ -341,9 +396,61 @@ function App() {
 		setTimelines(newOrder);
 	};
 
+	const onAssignToGroup = (timelineId: number, groupId: number | null) => {
+		setTimelines((prevTimelines) =>
+			prevTimelines.map((t) =>
+				t.id === timelineId ? { ...t, groupId: groupId || undefined } : t
+			)
+		);
+	};
+
+	const onDeleteGroup = (groupId: number) => {
+		const group = groups.find((g) => g.id === groupId);
+		if (!group) return;
+
+		const timelinesInGroup = timelines.filter((t) => t.groupId === groupId);
+		const message = timelinesInGroup.length > 0
+			? `Are you sure you want to delete "${group.name}"? The ${timelinesInGroup.length} timeline(s) will become ungrouped.`
+			: `Are you sure you want to delete "${group.name}"?`;
+
+		if (confirm(message)) {
+			// Remove group
+			setGroups((prevGroups) => prevGroups.filter((g) => g.id !== groupId));
+			// Unassign timelines from this group
+			setTimelines((prevTimelines) =>
+				prevTimelines.map((t) =>
+					t.groupId === groupId ? { ...t, groupId: undefined } : t
+				)
+			);
+		}
+	};
+
+	const onRenameGroup = (groupId: number) => {
+		const group = groups.find((g) => g.id === groupId);
+		if (!group) return;
+
+		const newName = prompt("Enter new group name:", group.name);
+		if (newName && newName.trim()) {
+			setGroups((prevGroups) =>
+				prevGroups.map((g) =>
+					g.id === groupId ? { ...g, name: newName.trim() } : g
+				)
+			);
+		}
+	};
+
+	const onToggleGroupExpanded = (groupId: number) => {
+		setGroups((prevGroups) =>
+			prevGroups.map((g) =>
+				g.id === groupId ? { ...g, isExpanded: !g.isExpanded } : g
+			)
+		);
+	};
+
 	const resetToDefaults = () => {
 		if (confirm("Are you sure you want to reset all data to defaults? This cannot be undone.")) {
 			setTimelines(defaultTimelinesData);
+			setGroups([]);
 			setStartDate("2025-10-01");
 		}
 	};
@@ -370,8 +477,11 @@ function App() {
 			{/* Fixed Sidebar */}
 			<Sidebar
 				timelines={timelines}
+				groups={groups}
 				visibleTimelineIds={visibleTimelineIds}
+				visibleGroupIds={visibleGroupIds}
 				setVisibleTimelineIds={setVisibleTimelineIds}
+				setVisibleGroupIds={setVisibleGroupIds}
 				sidebarWidth={sidebarWidth}
 				isResizing={isResizing}
 				setIsResizing={setIsResizing}
@@ -381,8 +491,13 @@ function App() {
 				goToPreviousDay={goToPreviousDay}
 				goToNextDay={goToNextDay}
 				onAddTimeline={onAddTimeline}
+				onAddGroup={onAddGroup}
 				resetToDefaults={resetToDefaults}
 				onReorderTimelines={onReorderTimelines}
+				onAssignToGroup={onAssignToGroup}
+				onDeleteGroup={onDeleteGroup}
+				onRenameGroup={onRenameGroup}
+				onToggleGroupExpanded={onToggleGroupExpanded}
 			/>
 
 			{/* Main Content Area */}
