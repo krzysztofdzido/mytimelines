@@ -375,6 +375,83 @@ function App() {
 				}}
 			>
 				<h2 style={{ fontSize: "1.2em", margin: "0 0 1rem 0" }}>Timelines</h2>
+
+				{/* Date Navigation Controls */}
+				<div style={{ marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "1px solid #ddd" }}>
+					<div style={{ display: "flex", gap: "4px", marginBottom: 8 }}>
+						<button
+							onClick={goToToday}
+							style={{
+								flex: 1,
+								padding: "8px 12px",
+								cursor: "pointer",
+								background: "#2196F3",
+								color: "white",
+								border: "none",
+								borderRadius: "4px",
+								fontWeight: "500",
+							}}
+						>
+							Today
+						</button>
+						<button
+							onClick={resetToDefaults}
+							style={{
+								flex: 1,
+								padding: "8px 12px",
+								background: "#ff6b6b",
+								color: "white",
+								border: "none",
+								borderRadius: "4px",
+								cursor: "pointer",
+								fontWeight: "500",
+							}}
+						>
+							Reset
+						</button>
+					</div>
+					<div style={{ display: "flex", gap: "4px", marginBottom: 8 }}>
+						<button
+							onClick={goToPreviousDay}
+							style={{
+								flex: 1,
+								padding: "6px 8px",
+								cursor: "pointer",
+								background: "white",
+								border: "1px solid #ccc",
+								borderRadius: "4px",
+							}}
+						>
+							← Prev
+						</button>
+						<button
+							onClick={goToNextDay}
+							style={{
+								flex: 1,
+								padding: "6px 8px",
+								cursor: "pointer",
+								background: "white",
+								border: "1px solid #ccc",
+								borderRadius: "4px",
+							}}
+						>
+							Next →
+						</button>
+					</div>
+					<input
+						type="date"
+						value={startDate}
+						onChange={(e) => setStartDate(e.target.value)}
+						style={{
+							width: "100%",
+							padding: "6px 8px",
+							border: "1px solid #ccc",
+							borderRadius: "4px",
+							fontSize: "14px",
+						}}
+					/>
+				</div>
+
 				{timelines.map((timeline) => (
 					<div key={timeline.id} style={{ marginBottom: "0.5rem" }}>
 						<label style={{ cursor: "pointer", display: "flex", alignItems: "center" }}>
@@ -398,6 +475,25 @@ function App() {
 						</label>
 					</div>
 				))}
+
+				{/* Add Timeline Button */}
+				<button
+					onClick={onAddTimeline}
+					style={{
+						width: "100%",
+						marginTop: "1rem",
+						padding: "8px 12px",
+						background: "#4CAF50",
+						color: "white",
+						border: "none",
+						borderRadius: "4px",
+						cursor: "pointer",
+						fontWeight: "500",
+					}}
+				>
+					+ Add Timeline
+				</button>
+
 				<div
 					style={{
 						position: "absolute",
@@ -422,47 +518,6 @@ function App() {
 					Click and drag on the calendar grid to create meetings/tasks. Drag tasks to move them.
 				</p>
 				<div style={{ marginBottom: "1rem" }}>
-					<button
-						onClick={goToToday}
-						style={{
-							marginRight: 8,
-							padding: "4px 12px",
-							cursor: "pointer",
-							background: "#2196F3",
-							color: "white",
-							border: "none",
-							borderRadius: "4px",
-						}}
-					>
-						Today
-					</button>
-					<button
-						onClick={goToPreviousDay}
-						style={{
-							marginRight: 8,
-							padding: "4px 12px",
-							cursor: "pointer",
-						}}
-					>
-						← Previous Day
-					</button>
-					<label style={{ marginRight: 8 }}>
-						<input
-							type="date"
-							value={startDate}
-							onChange={(e) => setStartDate(e.target.value)}
-						/>
-					</label>
-					<button
-						onClick={goToNextDay}
-						style={{
-							marginRight: 12,
-							padding: "4px 12px",
-							cursor: "pointer",
-						}}
-					>
-						Next Day →
-					</button>
 					{RANGE_OPTIONS.map((opt) => (
 						<button
 							key={opt}
@@ -476,34 +531,6 @@ function App() {
 							{opt.charAt(0).toUpperCase() + opt.slice(1)}
 						</button>
 					))}
-					<button
-						onClick={onAddTimeline}
-						style={{
-							marginLeft: 16,
-							padding: "4px 12px",
-							background: "#4CAF50",
-							color: "white",
-							border: "none",
-							borderRadius: "4px",
-							cursor: "pointer",
-						}}
-					>
-						+ Add Timeline
-					</button>
-					<button
-						onClick={resetToDefaults}
-						style={{
-							marginLeft: 8,
-							padding: "4px 12px",
-							background: "#ff6b6b",
-							color: "white",
-							border: "none",
-							borderRadius: "4px",
-							cursor: "pointer",
-						}}
-					>
-						Reset to Defaults
-					</button>
 				</div>
 				<div
 					ref={timelinesContainerRef}
