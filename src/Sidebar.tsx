@@ -20,6 +20,7 @@ interface SidebarProps {
 	onAddGroup: () => void;
 	resetToDefaults: () => void;
 	onReorderTimelines: (newOrder: Timeline[]) => void;
+	onReorderGroups: (newOrder: TimelineGroup[]) => void;
 	onAssignToGroup: (timelineId: number, groupId: number | null) => void;
 	onDeleteGroup: (groupId: number) => void;
 	onRenameGroup: (groupId: number) => void;
@@ -44,6 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 	onAddGroup,
 	resetToDefaults,
 	onReorderTimelines,
+	onReorderGroups,
 	onAssignToGroup,
 	onDeleteGroup,
 	onRenameGroup,
@@ -54,6 +56,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 	const [draggedGroupId, setDraggedGroupId] = useState<number | null>(null);
 	const [draggedTimelineId, setDraggedTimelineId] = useState<number | null>(null);
 	const [dropTargetGroupId, setDropTargetGroupId] = useState<number | null>(null);
+	const [draggedGroupIndex, setDraggedGroupIndex] = useState<number | null>(null);
+	const [dragOverGroupIndex, setDragOverGroupIndex] = useState<number | null>(null);
+	const [isDraggingGroup, setIsDraggingGroup] = useState(false);
 
 	const handleDragStart = (e: React.DragEvent, index: number, timelineId: number, groupId?: number) => {
 		setDraggedIndex(index);
@@ -203,6 +208,63 @@ const Sidebar: React.FC<SidebarProps> = ({
 		});
 	};
 
+	// Group drag handlers
+	const handleGroupDragStart = (e: React.DragEvent, index: number) => {
+		setDraggedGroupIndex(index);
+		setIsDraggingGroup(true);
+		e.dataTransfer.effectAllowed = "move";
+		// Set a custom drag image or handle
+		setTimeout(() => {
+			const target = e.currentTarget as HTMLElement;
+			target.style.opacity = "0.5";
+		}, 0);
+	};
+
+	const handleGroupDragEnd = (e: React.DragEvent) => {
+		const target = e.currentTarget as HTMLElement;
+		target.style.opacity = "1";
+		setDraggedGroupIndex(null);
+		setDragOverGroupIndex(null);
+		setIsDraggingGroup(false);
+	};
+
+	const handleGroupDragOverForReorder = (e: React.DragEvent, index: number) => {
+		if (!isDraggingGroup) return;
+		e.preventDefault();
+		e.stopPropagation();
+		e.dataTransfer.dropEffect = "move";
+
+		if (draggedGroupIndex === null || draggedGroupIndex === index) {
+			return;
+		}
+
+		setDragOverGroupIndex(index);
+	};
+
+	const handleGroupDragLeaveForReorder = () => {
+		setDragOverGroupIndex(null);
+	};
+
+	const handleGroupDropForReorder = (e: React.DragEvent, dropIndex: number) => {
+		if (!isDraggingGroup || draggedGroupIndex === null) return;
+		e.preventDefault();
+		e.stopPropagation();
+
+		if (draggedGroupIndex === dropIndex) {
+			setDragOverGroupIndex(null);
+			return;
+		}
+
+		const newGroups = [...groups];
+		const [draggedGroup] = newGroups.splice(draggedGroupIndex, 1);
+		newGroups.splice(dropIndex, 0, draggedGroup);
+
+		onReorderGroups(newGroups);
+		setDragOverGroupIndex(null);
+		setDraggedGroupIndex(null);
+		setIsDraggingGroup(false);
+	};
+
 	const ungroupedTimelines = timelines.filter(t => !t.groupId);
 
 	return (
@@ -327,6 +389,12 @@ const Sidebar: React.FC<SidebarProps> = ({
 								border: isDropTarget ? "2px dashed #5C6BC0" : "2px solid transparent",
 								transition: "background 0.2s, border 0.2s",
 							}}
+							draggable
+							onDragStart={(e) => handleGroupDragStart(e, groups.findIndex(g => g.id === group.id))}
+							onDragEnd={handleGroupDragEnd}
+							onDragOver={(e) => handleGroupDragOverForReorder(e, groups.findIndex(g => g.id === group.id))}
+							onDragLeave={handleGroupDragLeaveForReorder}
+							onDrop={(e) => handleGroupDropForReorder(e, groups.findIndex(g => g.id === group.id))}
 						>
 							<div style={{ display: "flex", alignItems: "center", flex: 1 }}>
 								<span

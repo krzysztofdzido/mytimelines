@@ -396,6 +396,10 @@ function App() {
 		setTimelines(newOrder);
 	};
 
+	const onReorderGroups = (newOrder: TimelineGroup[]) => {
+		setGroups(newOrder);
+	};
+
 	const onAssignToGroup = (timelineId: number, groupId: number | null) => {
 		setTimelines((prevTimelines) =>
 			prevTimelines.map((t) =>
@@ -472,6 +476,18 @@ function App() {
 		setStartDate(today.toISOString().split('T')[0]);
 	};
 
+	// Color palette for groups
+	const groupColors = [
+		{ bg: "#f3e5f5", border: "#ce93d8", headerColor: "#8e24aa" }, // Purple
+		{ bg: "#e3f2fd", border: "#90caf9", headerColor: "#1976d2" }, // Blue
+		{ bg: "#e8f5e9", border: "#a5d6a7", headerColor: "#388e3c" }, // Green
+		{ bg: "#fff3e0", border: "#ffcc80", headerColor: "#f57c00" }, // Orange
+		{ bg: "#fce4ec", border: "#f48fb1", headerColor: "#c2185b" }, // Pink
+		{ bg: "#e0f2f1", border: "#80cbc4", headerColor: "#00796b" }, // Teal
+		{ bg: "#f1f8e9", border: "#c5e1a5", headerColor: "#689f38" }, // Light Green
+		{ bg: "#fff8e1", border: "#ffd54f", headerColor: "#fbc02d" }, // Yellow
+	];
+
 	return (
 		<div style={{ display: "flex", minHeight: "100vh" }}>
 			{/* Fixed Sidebar */}
@@ -494,6 +510,7 @@ function App() {
 				onAddGroup={onAddGroup}
 				resetToDefaults={resetToDefaults}
 				onReorderTimelines={onReorderTimelines}
+				onReorderGroups={onReorderGroups}
 				onAssignToGroup={onAssignToGroup}
 				onDeleteGroup={onDeleteGroup}
 				onRenameGroup={onRenameGroup}
@@ -525,7 +542,7 @@ function App() {
 					ref={timelinesContainerRef}
 					style={{
 						display: "flex",
-						justifyContent: "flex-start",
+						flexDirection: "row",
 						gap: "2rem",
 						marginTop: "2rem",
 						overflowX: "auto",
@@ -533,24 +550,125 @@ function App() {
 						paddingBottom: "1rem",
 					}}
 				>
-					{timelines.map((timeline) => (
-						visibleTimelineIds.has(timeline.id) && (
-							<Timeline
-								key={timeline.id}
-								timelineId={timeline.id}
-								name={timeline.name}
-								tasks={timeline.tasks}
-								person={person}
-								range={{ start, end }}
-								onTaskDurationChange={(taskId, newEndDate) => onTaskDurationChange(timeline.id, taskId, newEndDate)}
-								onTaskStartTimeChange={(taskId, newStartDate, newEndDate) => onTaskStartTimeChange(timeline.id, taskId, newStartDate, newEndDate)}
-								onTaskCreate={onTaskCreate}
-								onTaskDelete={onTaskDelete}
-								onDeleteTimeline={() => onDeleteTimeline(timeline.id)}
-								onRenameTimeline={() => onRenameTimeline(timeline.id)}
-							/>
-						)
-					))}
+					{/* Render grouped timelines */}
+					{groups.map((group, index) => {
+						const groupTimelines = timelines.filter(t => t.groupId === group.id && visibleTimelineIds.has(t.id));
+						if (groupTimelines.length === 0) return null;
+
+						const groupColor = groupColors[index % groupColors.length]; // Cycle through colors
+
+						return (
+							<div
+								key={`group-${group.id}`}
+								style={{
+									minWidth: "fit-content",
+									padding: "1.5rem",
+									border: `1px solid ${groupColor.border}`,
+									borderRadius: "8px",
+									background: groupColor.bg,
+									boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+									display: "flex",
+									flexDirection: "column",
+								}}
+							>
+								<h3 style={{
+									margin: "0 0 1rem 0",
+									color: groupColor.headerColor,
+									fontSize: "1.1em",
+									fontWeight: "600",
+									display: "flex",
+									alignItems: "center",
+									gap: "0.5rem",
+									whiteSpace: "nowrap",
+								}}>
+									📁 {group.name}
+								</h3>
+								<div
+									style={{
+										display: "flex",
+										justifyContent: "flex-start",
+										gap: "2rem",
+										flex: 1,
+									}}
+								>
+									{groupTimelines.map((timeline) => (
+										<Timeline
+											key={timeline.id}
+											timelineId={timeline.id}
+											name={timeline.name}
+											tasks={timeline.tasks}
+											person={person}
+											range={{ start, end }}
+											onTaskDurationChange={(taskId, newEndDate) => onTaskDurationChange(timeline.id, taskId, newEndDate)}
+											onTaskStartTimeChange={(taskId, newStartDate, newEndDate) => onTaskStartTimeChange(timeline.id, taskId, newStartDate, newEndDate)}
+											onTaskCreate={onTaskCreate}
+											onTaskDelete={onTaskDelete}
+											onDeleteTimeline={() => onDeleteTimeline(timeline.id)}
+											onRenameTimeline={() => onRenameTimeline(timeline.id)}
+										/>
+									))}
+								</div>
+							</div>
+						);
+					})}
+
+					{/* Render ungrouped timelines */}
+					{(() => {
+						const ungroupedTimelines = timelines.filter(t => !t.groupId && visibleTimelineIds.has(t.id));
+						if (ungroupedTimelines.length === 0) return null;
+
+						return (
+							<div
+								style={{
+									minWidth: groups.length > 0 ? "fit-content" : "auto",
+									padding: groups.length > 0 ? "1.5rem" : "0",
+									border: groups.length > 0 ? "1px solid #e0e0e0" : "none",
+									borderRadius: groups.length > 0 ? "8px" : "0",
+									background: groups.length > 0 ? "#fafafa" : "transparent",
+									boxShadow: groups.length > 0 ? "0 1px 3px rgba(0, 0, 0, 0.05)" : "none",
+									display: "flex",
+									flexDirection: "column",
+								}}
+							>
+								{groups.length > 0 && (
+									<h3 style={{
+										margin: "0 0 1rem 0",
+										color: "#757575",
+										fontSize: "1.1em",
+										fontWeight: "600",
+										whiteSpace: "nowrap",
+									}}>
+										Ungrouped
+									</h3>
+								)}
+								<div
+									style={{
+										display: "flex",
+										justifyContent: "flex-start",
+										gap: "2rem",
+										flex: 1,
+									}}
+								>
+									{ungroupedTimelines.map((timeline) => (
+										<Timeline
+											key={timeline.id}
+											timelineId={timeline.id}
+											name={timeline.name}
+											tasks={timeline.tasks}
+											person={person}
+											range={{ start, end }}
+											onTaskDurationChange={(taskId, newEndDate) => onTaskDurationChange(timeline.id, taskId, newEndDate)}
+											onTaskStartTimeChange={(taskId, newStartDate, newEndDate) => onTaskStartTimeChange(timeline.id, taskId, newStartDate, newEndDate)}
+											onTaskCreate={onTaskCreate}
+											onTaskDelete={onTaskDelete}
+											onDeleteTimeline={() => onDeleteTimeline(timeline.id)}
+											onRenameTimeline={() => onRenameTimeline(timeline.id)}
+										/>
+									))}
+								</div>
+							</div>
+						);
+					})()}
 				</div>
 			</div>
 		</div>

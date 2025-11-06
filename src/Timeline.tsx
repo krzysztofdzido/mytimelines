@@ -15,6 +15,7 @@ interface TimelineProps {
   timelineId: number;
   onDeleteTimeline?: () => void;
   onRenameTimeline?: () => void;
+  groupName?: string;
 }
 
 const Timeline: React.FC<TimelineProps> = ({
@@ -26,7 +27,8 @@ const Timeline: React.FC<TimelineProps> = ({
   onTaskStartTimeChange,
   onTaskCreate,
   onTaskDelete,
-  timelineId
+  timelineId,
+  groupName
 }) => {
   const [creating, setCreating] = useState(false);
   const [dragStart, setDragStart] = useState<Date | null>(null);
