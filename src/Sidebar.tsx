@@ -1,4 +1,4 @@
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { Timeline } from "./types";
 
 interface SidebarProps {
@@ -15,6 +15,7 @@ interface SidebarProps {
 	goToNextDay: () => void;
 	onAddTimeline: () => void;
 	resetToDefaults: () => void;
+	onReorderTimelines: (newOrder: Timeline[]) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -30,7 +31,71 @@ const Sidebar: React.FC<SidebarProps> = ({
 	goToNextDay,
 	onAddTimeline,
 	resetToDefaults,
+	onReorderTimelines,
 }) => {
+	const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+	const handleDragStart = (e: React.DragEvent, index: number) => {
+		setDraggedIndex(index);
+		e.dataTransfer.effectAllowed = "move";
+		// Add a small delay to allow the drag image to be captured
+		setTimeout(() => {
+			(e.target as HTMLElement).style.opacity = "0.5";
+		}, 0);
+	};
+
+	const handleDragEnd = (e: React.DragEvent) => {
+		(e.target as HTMLElement).style.opacity = "1";
+		setDraggedIndex(null);
+		setDragOverIndex(null);
+	};
+
+	const handleDragOver = (e: React.DragEvent, index: number) => {
+		e.preventDefault();
+		e.dataTransfer.dropEffect = "move";
+
+		if (draggedIndex === null || draggedIndex === index) {
+			return;
+		}
+
+		setDragOverIndex(index);
+	};
+
+	const handleDragLeave = () => {
+		setDragOverIndex(null);
+	};
+
+	const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+		e.preventDefault();
+
+		if (draggedIndex === null || draggedIndex === dropIndex) {
+			setDragOverIndex(null);
+			return;
+		}
+
+		const newTimelines = [...timelines];
+		const [draggedTimeline] = newTimelines.splice(draggedIndex, 1);
+		newTimelines.splice(dropIndex, 0, draggedTimeline);
+
+		onReorderTimelines(newTimelines);
+		setDragOverIndex(null);
+		setDraggedIndex(null);
+	};
+
+	const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>, timelineId: number) => {
+		e.stopPropagation();
+		setVisibleTimelineIds((prev) => {
+			const newSet = new Set(prev);
+			if (e.target.checked) {
+				newSet.add(timelineId);
+			} else {
+				newSet.delete(timelineId);
+			}
+			return newSet;
+		});
+	};
+
 	return (
 		<div
 			style={{
@@ -126,24 +191,33 @@ const Sidebar: React.FC<SidebarProps> = ({
 			</div>
 
 			{/* Timeline List */}
-			{timelines.map((timeline) => (
-				<div key={timeline.id} style={{ marginBottom: "0.5rem" }}>
-					<label style={{ cursor: "pointer", display: "flex", alignItems: "center" }}>
+			{timelines.map((timeline, index) => (
+				<div
+					key={timeline.id}
+					draggable
+					onDragStart={(e) => handleDragStart(e, index)}
+					onDragEnd={handleDragEnd}
+					onDragOver={(e) => handleDragOver(e, index)}
+					onDragLeave={handleDragLeave}
+					onDrop={(e) => handleDrop(e, index)}
+					style={{
+						marginBottom: "0.5rem",
+						padding: "8px",
+						background: dragOverIndex === index ? "#e3f2fd" : "white",
+						border: dragOverIndex === index ? "2px dashed #2196F3" : "1px solid transparent",
+						borderRadius: "4px",
+						cursor: "move",
+						transition: "background 0.2s, border 0.2s",
+					}}
+				>
+					<label style={{ cursor: "move", display: "flex", alignItems: "center" }}>
+						<span style={{ marginRight: "8px", color: "#999", fontSize: "1.2em" }}>⋮⋮</span>
 						<input
 							type="checkbox"
 							checked={visibleTimelineIds.has(timeline.id)}
-							onChange={(e) => {
-								setVisibleTimelineIds((prev) => {
-									const newSet = new Set(prev);
-									if (e.target.checked) {
-										newSet.add(timeline.id);
-									} else {
-										newSet.delete(timeline.id);
-									}
-									return newSet;
-								});
-							}}
+							onChange={(e) => handleCheckboxChange(e, timeline.id)}
 							style={{ cursor: "pointer" }}
+							onClick={(e) => e.stopPropagation()}
 						/>
 						<span style={{ marginLeft: 8 }}>{timeline.name}</span>
 					</label>

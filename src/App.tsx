@@ -167,18 +167,21 @@ function App() {
 	const [sidebarWidth, setSidebarWidth] = useState(250);
 	const [isResizing, setIsResizing] = useState(false);
 
-	// Update visible timelines when timelines are added
+	// Update visible timelines when timelines are added (not when reordered)
 	useEffect(() => {
 		setVisibleTimelineIds(prev => {
 			const newSet = new Set(prev);
+			let hasChanges = false;
 			timelines.forEach(t => {
 				if (!newSet.has(t.id)) {
 					newSet.add(t.id);
+					hasChanges = true;
 				}
 			});
-			return newSet;
+			// Only return new Set if there were actual changes
+			return hasChanges ? newSet : prev;
 		});
-	}, [timelines]);
+	}, [timelines.length, timelines.map(t => t.id).sort((a, b) => a - b).join(',')]);
 
 	const { start, end } = useMemo(() => getCurrentRangeDates(range, startDate), [range, startDate]);
 
@@ -334,6 +337,10 @@ function App() {
 		}
 	};
 
+	const onReorderTimelines = (newOrder: TimelineType[]) => {
+		setTimelines(newOrder);
+	};
+
 	const resetToDefaults = () => {
 		if (confirm("Are you sure you want to reset all data to defaults? This cannot be undone.")) {
 			setTimelines(defaultTimelinesData);
@@ -375,6 +382,7 @@ function App() {
 				goToNextDay={goToNextDay}
 				onAddTimeline={onAddTimeline}
 				resetToDefaults={resetToDefaults}
+				onReorderTimelines={onReorderTimelines}
 			/>
 
 			{/* Main Content Area */}
