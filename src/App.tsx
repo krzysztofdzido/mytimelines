@@ -459,6 +459,66 @@ function App() {
 		}
 	};
 
+	const exportToJSON = () => {
+		const data = {
+			timelines,
+			groups,
+			exportDate: new Date().toISOString(),
+			version: "1.0"
+		};
+
+		const jsonString = JSON.stringify(data, null, 2);
+		const blob = new Blob([jsonString], { type: "application/json" });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `timelines-export-${new Date().toISOString().split('T')[0]}.json`;
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+	};
+
+	const importFromJSON = () => {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = "application/json";
+		input.onchange = (e: Event) => {
+			const file = (e.target as HTMLInputElement).files?.[0];
+			if (!file) return;
+
+			const reader = new FileReader();
+			reader.onload = (event) => {
+				try {
+					const content = event.target?.result as string;
+					const data = JSON.parse(content);
+
+					if (data.timelines && Array.isArray(data.timelines)) {
+						if (confirm("This will replace all current timelines and groups. Continue?")) {
+							setTimelines(data.timelines);
+							setGroups(data.groups || []);
+							alert("Timelines imported successfully!");
+						}
+					} else {
+						alert("Invalid file format. Please select a valid timelines export file.");
+					}
+				} catch (error) {
+					console.error("Error parsing JSON:", error);
+					alert("Error reading file. Please ensure it's a valid JSON file.");
+				}
+			};
+			reader.readAsText(file);
+		};
+		input.click();
+	};
+
+	const clearAll = () => {
+		if (confirm("Are you sure you want to remove all timelines and groups? This cannot be undone.")) {
+			setTimelines([]);
+			setGroups([]);
+		}
+	};
+
 	const goToPreviousDay = () => {
 		const date = new Date(startDate);
 		date.setDate(date.getDate() - 1);
@@ -509,6 +569,9 @@ function App() {
 				onAddTimeline={onAddTimeline}
 				onAddGroup={onAddGroup}
 				resetToDefaults={resetToDefaults}
+				clearAll={clearAll}
+				exportToJSON={exportToJSON}
+				importFromJSON={importFromJSON}
 				onReorderTimelines={onReorderTimelines}
 				onReorderGroups={onReorderGroups}
 				onAssignToGroup={onAssignToGroup}

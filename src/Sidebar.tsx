@@ -19,6 +19,9 @@ interface SidebarProps {
 	onAddTimeline: () => void;
 	onAddGroup: () => void;
 	resetToDefaults: () => void;
+	clearAll: () => void;
+	exportToJSON: () => void;
+	importFromJSON: () => void;
 	onReorderTimelines: (newOrder: Timeline[]) => void;
 	onReorderGroups: (newOrder: TimelineGroup[]) => void;
 	onAssignToGroup: (timelineId: number, groupId: number | null) => void;
@@ -44,6 +47,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 	onAddTimeline,
 	onAddGroup,
 	resetToDefaults,
+	clearAll,
+	exportToJSON,
+	importFromJSON,
 	onReorderTimelines,
 	onReorderGroups,
 	onAssignToGroup,
@@ -357,6 +363,63 @@ const Sidebar: React.FC<SidebarProps> = ({
 						fontSize: "14px",
 					}}
 				/>
+			</div>
+
+			{/* Export/Import Controls */}
+			<div style={{ marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "1px solid #ddd" }}>
+				<div style={{ display: "flex", gap: "4px", marginBottom: 8 }}>
+					<button
+						onClick={exportToJSON}
+						style={{
+							flex: 1,
+							padding: "8px 12px",
+							cursor: "pointer",
+							background: "#4CAF50",
+							color: "white",
+							border: "none",
+							borderRadius: "4px",
+							fontWeight: "500",
+							fontSize: "0.9em",
+						}}
+						title="Export all timelines to JSON file"
+					>
+						📥 Export
+					</button>
+					<button
+						onClick={importFromJSON}
+						style={{
+							flex: 1,
+							padding: "8px 12px",
+							cursor: "pointer",
+							background: "#FF9800",
+							color: "white",
+							border: "none",
+							borderRadius: "4px",
+							fontWeight: "500",
+							fontSize: "0.9em",
+						}}
+						title="Import timelines from JSON file"
+					>
+						📤 Import
+					</button>
+				</div>
+				<button
+					onClick={clearAll}
+					style={{
+						width: "100%",
+						padding: "8px 12px",
+						cursor: "pointer",
+						background: "#9E9E9E",
+						color: "white",
+						border: "none",
+						borderRadius: "4px",
+						fontWeight: "500",
+						fontSize: "0.9em",
+					}}
+					title="Remove all timelines and groups"
+				>
+					🗑️ Clear All
+				</button>
 			</div>
 
 			<h2 style={{ fontSize: "1.2em", margin: "0 0 1rem 0" }}>Timelines</h2>
