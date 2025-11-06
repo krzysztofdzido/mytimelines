@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # Production build
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mytimelines:latest
+    container_name: mytimelines-app
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  # Development mode with hot reload
+  dev:
+    image: node:20-alpine
+    container_name: mytimelines-dev
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      - NODE_ENV=development
+    stdin_open: true
+    tty: true
+

@@ -1,0 +1,10 @@
+# Docker ignore file
+node_modules
+npm-debug.log
+.DS_Store
+dist
+.env
+.vscode
+.idea
+*.log
+
