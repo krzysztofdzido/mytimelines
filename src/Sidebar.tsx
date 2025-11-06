@@ -112,8 +112,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 				zIndex: 100,
 			}}
 		>
-			<h2 style={{ fontSize: "1.2em", margin: "0 0 1rem 0" }}>Timelines</h2>
-
 			{/* Date Navigation Controls */}
 			<div style={{ marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "1px solid #ddd" }}>
 				<div style={{ display: "flex", gap: "4px", marginBottom: 8 }}>
@@ -189,6 +187,8 @@ const Sidebar: React.FC<SidebarProps> = ({
 					}}
 				/>
 			</div>
+
+			<h2 style={{ fontSize: "1.2em", margin: "0 0 1rem 0" }}>Timelines</h2>
 
 			{/* Timeline List */}
 			{timelines.map((timeline, index) => (
