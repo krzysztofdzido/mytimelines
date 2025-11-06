@@ -1,12 +1,37 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import Task from "./Task";
+import { Task as TaskType, DateRange, TimeSlot } from "./types";
 import "./Timeline.css";
 
-const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskStartTimeChange, onTaskCreate, onTaskDelete, timelineId }) => {
+interface TimelineProps {
+  name: string;
+  tasks: TaskType[];
+  person: string;
+  range: DateRange;
+  onTaskDurationChange?: (taskId: number, newEndDate: string) => void;
+  onTaskStartTimeChange?: (taskId: number, newStartDate: string, newEndDate: string) => void;
+  onTaskCreate?: (timelineId: number, newTask: Omit<TaskType, 'id'>) => void;
+  onTaskDelete?: (timelineId: number, taskId: number) => void;
+  timelineId: number;
+  onDeleteTimeline?: () => void;
+  onRenameTimeline?: () => void;
+}
+
+const Timeline: React.FC<TimelineProps> = ({
+  name,
+  tasks,
+  person,
+  range,
+  onTaskDurationChange,
+  onTaskStartTimeChange,
+  onTaskCreate,
+  onTaskDelete,
+  timelineId
+}) => {
   const [creating, setCreating] = useState(false);
-  const [dragStart, setDragStart] = useState(null);
-  const [dragEnd, setDragEnd] = useState(null);
-  const timelineRef = useRef();
+  const [dragStart, setDragStart] = useState<Date | null>(null);
+  const [dragEnd, setDragEnd] = useState<Date | null>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   // Filter tasks by date range (if any part of the task is in range)
   const filteredTasks = tasks.filter((task) => {
@@ -16,8 +41,8 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskStar
   });
 
   // Generate time slots starting from 8 AM to midnight (08:00 to 23:45 in 15-minute increments)
-  const getTimeSlots = () => {
-    const slots = [];
+  const getTimeSlots = (): TimeSlot[] => {
+    const slots: TimeSlot[] = [];
     for (let hour = 8; hour < 24; hour++) {
       for (let minute = 0; minute < 60; minute += 15) {
         slots.push({ hour, minute });
@@ -32,11 +57,11 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskStar
   // Get the current visible day (use first day of range)
   const currentDay = new Date(range.start);
 
-  const formatTime = (hour, minute) => {
+  const formatTime = (hour: number, minute: number): string => {
     return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
   };
 
-  const getDateTimeFromSlot = (slotIndex) => {
+  const getDateTimeFromSlot = (slotIndex: number): Date | null => {
     const slot = timeSlots[slotIndex];
     if (!slot) return null;
 
@@ -45,9 +70,10 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskStar
     return date;
   };
 
-  const handleTimelineMouseDown = (e) => {
-    if (e.target.classList.contains('timeline-slot') || e.target.classList.contains('timeline-hour-label')) {
-      const slotIndex = parseInt(e.target.dataset.slotIndex);
+  const handleTimelineMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('timeline-slot') || target.classList.contains('timeline-hour-label')) {
+      const slotIndex = parseInt(target.dataset.slotIndex || '0');
       const datetime = getDateTimeFromSlot(slotIndex);
       if (datetime) {
         setDragStart(datetime);
@@ -58,7 +84,7 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskStar
     }
   };
 
-  const handleTimelineMouseMove = (e) => {
+  const handleTimelineMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (creating && timelineRef.current) {
       const rect = timelineRef.current.getBoundingClientRect();
       const y = e.clientY - rect.top;
@@ -102,7 +128,7 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskStar
     }
   }, [creating, dragStart, dragEnd]);
 
-  const getSlotIndexFromDateTime = (datetime) => {
+  const getSlotIndexFromDateTime = (datetime: Date): number => {
     const hour = datetime.getHours();
     const minute = datetime.getMinutes();
     const slotMinute = Math.floor(minute / 15) * 15;
@@ -110,7 +136,7 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskStar
     return (hour - 8) * 4 + slotMinute / 15;
   };
 
-  const getPreviewStyle = () => {
+  const getPreviewStyle = (): React.CSSProperties | null => {
     if (!creating || !dragStart || !dragEnd) return null;
 
     const startSlot = getSlotIndexFromDateTime(dragStart < dragEnd ? dragStart : dragEnd);
@@ -155,7 +181,7 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskStar
         {creating && dragStart && dragEnd && (
           <div
             className="task-preview"
-            style={getPreviewStyle()}
+            style={getPreviewStyle() || undefined}
           >
             Creating meeting...
           </div>
@@ -174,7 +200,7 @@ const Timeline = ({ name, tasks, person, range, onTaskDurationChange, onTaskStar
               person={person}
               onDurationChange={onTaskDurationChange}
               onStartTimeChange={onTaskStartTimeChange}
-              onDelete={onTaskDelete ? () => onTaskDelete(timelineId, task.id) : null}
+              onDelete={onTaskDelete ? () => onTaskDelete(timelineId, task.id) : undefined}
               slotHeight={SLOT_HEIGHT}
               currentDay={currentDay}
             />

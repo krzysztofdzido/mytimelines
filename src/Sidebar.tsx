@@ -1,6 +1,23 @@
-import React from "react";
+import { Dispatch, SetStateAction } from "react";
+import { Timeline } from "./types";
 
-const Sidebar = ({
+interface SidebarProps {
+	timelines: Timeline[];
+	visibleTimelineIds: Set<number>;
+	setVisibleTimelineIds: Dispatch<SetStateAction<Set<number>>>;
+	sidebarWidth: number;
+	isResizing: boolean;
+	setIsResizing: Dispatch<SetStateAction<boolean>>;
+	startDate: string;
+	setStartDate: Dispatch<SetStateAction<string>>;
+	goToToday: () => void;
+	goToPreviousDay: () => void;
+	goToNextDay: () => void;
+	onAddTimeline: () => void;
+	resetToDefaults: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({
 	timelines,
 	visibleTimelineIds,
 	setVisibleTimelineIds,

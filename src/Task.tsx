@@ -1,23 +1,41 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Task as TaskType } from "./types";
 import "./Task.css";
 
-const Task = ({ task, person, onDurationChange, onDelete, onStartTimeChange, slotHeight }) => {
+interface TaskProps {
+  task: TaskType;
+  person: string;
+  onDurationChange?: (taskId: number, newEndDate: string) => void;
+  onDelete?: (taskId: number) => void;
+  onStartTimeChange?: (taskId: number, newStartDate: string, newEndDate: string) => void;
+  slotHeight: number;
+  currentDay: Date;
+}
+
+const Task: React.FC<TaskProps> = ({
+  task,
+  person,
+  onDurationChange,
+  onDelete,
+  onStartTimeChange,
+  slotHeight
+}) => {
   const isPending = task.assignedTo === person && task.status === "pending";
   const [draggingResize, setDraggingResize] = useState(false);
   const [draggingMove, setDraggingMove] = useState(false);
   const [dragStartY, setDragStartY] = useState(0);
-  const cardRef = useRef();
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const startDate = new Date(task.startDate);
   const endDate = new Date(task.endDate);
 
   // Calculate duration in minutes
-  const durationMinutes = Math.round((endDate - startDate) / (1000 * 60));
+  const durationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60));
   const durationHours = Math.floor(durationMinutes / 60);
   const durationMins = durationMinutes % 60;
 
   // Calculate position and height based on time (starting from 8 AM)
-  const getSlotIndexFromDateTime = (datetime) => {
+  const getSlotIndexFromDateTime = (datetime: Date): number => {
     const hour = datetime.getHours();
     const minute = datetime.getMinutes();
     const slotMinute = Math.floor(minute / 15) * 15;
@@ -32,13 +50,13 @@ const Task = ({ task, person, onDurationChange, onDelete, onStartTimeChange, slo
   const cardHeight = Math.max(40, numSlots * slotHeight);
   const cardTop = startSlot * slotHeight;
 
-  const formatTime = (date) => {
+  const formatTime = (date: Date): string => {
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
   };
 
-  const formatDuration = () => {
+  const formatDuration = (): string => {
     if (durationHours > 0 && durationMins > 0) {
       return `${durationHours}h ${durationMins}m`;
     } else if (durationHours > 0) {
@@ -49,7 +67,7 @@ const Task = ({ task, person, onDurationChange, onDelete, onStartTimeChange, slo
   };
 
   // Handle dragging the resize handle (bottom)
-  const handleResizeMouseDown = (e) => {
+  const handleResizeMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setDraggingResize(true);
@@ -57,10 +75,11 @@ const Task = ({ task, person, onDurationChange, onDelete, onStartTimeChange, slo
   };
 
   // Handle dragging the entire task card (move)
-  const handleMoveMouseDown = (e) => {
+  const handleMoveMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     // Don't start move if clicking delete button or resize handle
-    if (e.target.classList.contains('task-delete') ||
-        e.target.classList.contains('task-resize-handle')) {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('task-delete') ||
+        target.classList.contains('task-resize-handle')) {
       return;
     }
     e.preventDefault();
@@ -75,7 +94,7 @@ const Task = ({ task, person, onDurationChange, onDelete, onStartTimeChange, slo
   useEffect(() => {
     if (!draggingResize) return;
 
-    const onMouseMove = (e) => {
+    const onMouseMove = (e: MouseEvent) => {
       if (!cardRef.current) return;
       const cardRect = cardRef.current.getBoundingClientRect();
       const deltaPx = e.clientY - cardRect.bottom;
@@ -110,7 +129,7 @@ const Task = ({ task, person, onDurationChange, onDelete, onStartTimeChange, slo
   useEffect(() => {
     if (!draggingMove) return;
 
-    const onMouseMove = (e) => {
+    const onMouseMove = (e: MouseEvent) => {
       const deltaPx = e.clientY - dragStartY;
       const slotsDelta = Math.round(deltaPx / slotHeight);
 

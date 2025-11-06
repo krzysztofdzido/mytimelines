@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Timeline from "./Timeline";
 import Sidebar from "./Sidebar";
+import { Timeline as TimelineType, Task, RangeOption, DateRange } from "./types";
 import "./App.css";
 
 const STORAGE_KEY = "mytimelines_data";
 
-const defaultTimelinesData = [
+const defaultTimelinesData: TimelineType[] = [
 	{
 		id: 1,
 		name: "Project Alpha",
@@ -92,11 +93,11 @@ const defaultTimelinesData = [
 
 const person = "Alice";
 
-const RANGE_OPTIONS = ["day", "week", "month", "year"];
+const RANGE_OPTIONS: RangeOption[] = ["day", "week", "month", "year"];
 
-function getCurrentRangeDates(range, startDate) {
+function getCurrentRangeDates(range: RangeOption, startDate: string): DateRange {
 	const base = new Date(startDate);
-	let start, end;
+	let start: Date, end: Date;
 	switch (range) {
 		case "day":
 			start = new Date(base.getFullYear(), base.getMonth(), base.getDate());
@@ -126,10 +127,10 @@ function getCurrentRangeDates(range, startDate) {
 
 function App() {
 	// Initialize from URL parameters if available
-	const [range, setRange] = useState(() => {
+	const [range, setRange] = useState<RangeOption>(() => {
 		const params = new URLSearchParams(window.location.search);
-		const urlRange = params.get('range');
-		return RANGE_OPTIONS.includes(urlRange) ? urlRange : "day";
+		const urlRange = params.get('range') as RangeOption | null;
+		return RANGE_OPTIONS.includes(urlRange as RangeOption) ? (urlRange as RangeOption) : "day";
 	});
 
 	const [startDate, setStartDate] = useState(() => {
@@ -142,10 +143,10 @@ function App() {
 		return "2025-10-01";
 	});
 
-	const timelinesContainerRef = React.useRef(null);
+	const timelinesContainerRef = useRef<HTMLDivElement>(null);
 
 	// Initialize timelines from localStorage or use defaults
-	const [timelines, setTimelines] = useState(() => {
+	const [timelines, setTimelines] = useState<TimelineType[]>(() => {
 		try {
 			const stored = localStorage.getItem(STORAGE_KEY);
 			if (stored) {
@@ -158,7 +159,7 @@ function App() {
 	});
 
 	// Track which timelines are visible (all visible by default)
-	const [visibleTimelineIds, setVisibleTimelineIds] = useState(() => {
+	const [visibleTimelineIds, setVisibleTimelineIds] = useState<Set<number>>(() => {
 		return new Set(timelines.map(t => t.id));
 	});
 
@@ -201,7 +202,7 @@ function App() {
 
 	// Handle sidebar resize
 	useEffect(() => {
-		const handleMouseMove = (e) => {
+		const handleMouseMove = (e: MouseEvent) => {
 			if (isResizing) {
 				const newWidth = Math.max(150, Math.min(600, e.clientX));
 				setSidebarWidth(newWidth);
@@ -227,7 +228,7 @@ function App() {
 		};
 	}, [isResizing]);
 
-	const onTaskDurationChange = (timelineId, taskId, newEndDate) => {
+	const onTaskDurationChange = (timelineId: number, taskId: number, newEndDate: string) => {
 		setTimelines((prevTimelines) =>
 			prevTimelines.map((timeline) =>
 				timeline.id === timelineId
@@ -242,7 +243,7 @@ function App() {
 		);
 	};
 
-	const onTaskStartTimeChange = (timelineId, taskId, newStartDate, newEndDate) => {
+	const onTaskStartTimeChange = (timelineId: number, taskId: number, newStartDate: string, newEndDate: string) => {
 		setTimelines((prevTimelines) =>
 			prevTimelines.map((timeline) =>
 				timeline.id === timelineId
@@ -257,7 +258,7 @@ function App() {
 		);
 	};
 
-	const onTaskCreate = (timelineId, newTask) => {
+	const onTaskCreate = (timelineId: number, newTask: Omit<Task, 'id'>) => {
 		setTimelines((prevTimelines) =>
 			prevTimelines.map((timeline) =>
 				timeline.id === timelineId
@@ -276,7 +277,7 @@ function App() {
 		);
 	};
 
-	const onTaskDelete = (timelineId, taskId) => {
+	const onTaskDelete = (timelineId: number, taskId: number) => {
 		if (confirm("Are you sure you want to delete this task?")) {
 			setTimelines((prevTimelines) =>
 				prevTimelines.map((timeline) =>
@@ -294,7 +295,7 @@ function App() {
 	const onAddTimeline = () => {
 		const name = prompt("Enter timeline name:");
 		if (name && name.trim()) {
-			const newTimeline = {
+			const newTimeline: TimelineType = {
 				id: Date.now(),
 				name: name.trim(),
 				tasks: []
@@ -313,13 +314,13 @@ function App() {
 		}
 	};
 
-	const onDeleteTimeline = (timelineId) => {
+	const onDeleteTimeline = (timelineId: number) => {
 		if (confirm("Are you sure you want to delete this timeline? All tasks will be lost.")) {
 			setTimelines((prevTimelines) => prevTimelines.filter((timeline) => timeline.id !== timelineId));
 		}
 	};
 
-	const onRenameTimeline = (timelineId) => {
+	const onRenameTimeline = (timelineId: number) => {
 		const timeline = timelines.find((t) => t.id === timelineId);
 		if (!timeline) return;
 
