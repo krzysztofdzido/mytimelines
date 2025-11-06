@@ -156,6 +156,28 @@ function App() {
 		return defaultTimelinesData;
 	});
 
+	// Track which timelines are visible (all visible by default)
+	const [visibleTimelineIds, setVisibleTimelineIds] = useState(() => {
+		return new Set(timelines.map(t => t.id));
+	});
+
+	// Track sidebar width
+	const [sidebarWidth, setSidebarWidth] = useState(250);
+	const [isResizing, setIsResizing] = useState(false);
+
+	// Update visible timelines when timelines are added
+	useEffect(() => {
+		setVisibleTimelineIds(prev => {
+			const newSet = new Set(prev);
+			timelines.forEach(t => {
+				if (!newSet.has(t.id)) {
+					newSet.add(t.id);
+				}
+			});
+			return newSet;
+		});
+	}, [timelines]);
+
 	const { start, end } = useMemo(() => getCurrentRangeDates(range, startDate), [range, startDate]);
 
 	// Update URL when date or range changes
@@ -175,6 +197,34 @@ function App() {
 			console.error("Error saving to localStorage:", error);
 		}
 	}, [timelines]);
+
+	// Handle sidebar resize
+	useEffect(() => {
+		const handleMouseMove = (e) => {
+			if (isResizing) {
+				const newWidth = Math.max(150, Math.min(600, e.clientX));
+				setSidebarWidth(newWidth);
+			}
+		};
+
+		const handleMouseUp = () => {
+			setIsResizing(false);
+		};
+
+		if (isResizing) {
+			document.addEventListener('mousemove', handleMouseMove);
+			document.addEventListener('mouseup', handleMouseUp);
+			document.body.style.cursor = 'ew-resize';
+			document.body.style.userSelect = 'none';
+		}
+
+		return () => {
+			document.removeEventListener('mousemove', handleMouseMove);
+			document.removeEventListener('mouseup', handleMouseUp);
+			document.body.style.cursor = '';
+			document.body.style.userSelect = '';
+		};
+	}, [isResizing]);
 
 	const onTaskDurationChange = (timelineId, taskId, newEndDate) => {
 		setTimelines((prevTimelines) =>
@@ -307,123 +357,185 @@ function App() {
 	};
 
 	return (
-		<div>
-			<h1>Calendar Timeline - Pending Tasks for {person}</h1>
-			<p style={{ textAlign: 'center', color: '#666', fontSize: '0.9em' }}>
-				Click and drag on the calendar grid to create meetings/tasks. Drag tasks to move them.
-			</p>
-			<div style={{ marginBottom: "1rem" }}>
-				<button
-					onClick={goToToday}
-					style={{
-						marginRight: 8,
-						padding: "4px 12px",
-						cursor: "pointer",
-						background: "#2196F3",
-						color: "white",
-						border: "none",
-						borderRadius: "4px",
-					}}
-				>
-					Today
-				</button>
-				<button
-					onClick={goToPreviousDay}
-					style={{
-						marginRight: 8,
-						padding: "4px 12px",
-						cursor: "pointer",
-					}}
-				>
-					← Previous Day
-				</button>
-				<label style={{ marginRight: 8 }}>
-					<input
-						type="date"
-						value={startDate}
-						onChange={(e) => setStartDate(e.target.value)}
-					/>
-				</label>
-				<button
-					onClick={goToNextDay}
-					style={{
-						marginRight: 12,
-						padding: "4px 12px",
-						cursor: "pointer",
-					}}
-				>
-					Next Day →
-				</button>
-				{RANGE_OPTIONS.map((opt) => (
-					<button
-						key={opt}
-						onClick={() => setRange(opt)}
-						style={{
-							marginRight: 8,
-							fontWeight: range === opt ? "bold" : "normal",
-							background: range === opt ? "#e0e0e0" : undefined,
-						}}
-					>
-						{opt.charAt(0).toUpperCase() + opt.slice(1)}
-					</button>
-				))}
-				<button
-					onClick={onAddTimeline}
-					style={{
-						marginLeft: 16,
-						padding: "4px 12px",
-						background: "#4CAF50",
-						color: "white",
-						border: "none",
-						borderRadius: "4px",
-						cursor: "pointer",
-					}}
-				>
-					+ Add Timeline
-				</button>
-				<button
-					onClick={resetToDefaults}
-					style={{
-						marginLeft: 8,
-						padding: "4px 12px",
-						background: "#ff6b6b",
-						color: "white",
-						border: "none",
-						borderRadius: "4px",
-						cursor: "pointer",
-					}}
-				>
-					Reset to Defaults
-				</button>
-			</div>
+		<div style={{ display: "flex", minHeight: "100vh" }}>
+			{/* Fixed Sidebar */}
 			<div
-				ref={timelinesContainerRef}
 				style={{
-					display: "flex",
-					justifyContent: "flex-start",
-					gap: "2rem",
-					marginTop: "2rem",
-					overflowX: "auto",
-					overflowY: "hidden",
-					paddingBottom: "1rem",
+					position: "fixed",
+					left: 0,
+					top: 0,
+					width: `${sidebarWidth}px`,
+					height: "100vh",
+					padding: "1rem",
+					background: "#f9f9f9",
+					borderRight: "1px solid #ddd",
+					boxShadow: "2px 0 4px rgba(0, 0, 0, 0.1)",
+					overflowY: "auto",
+					zIndex: 100,
 				}}
 			>
+				<h2 style={{ fontSize: "1.2em", margin: "0 0 1rem 0" }}>Timelines</h2>
 				{timelines.map((timeline) => (
-					<Timeline
-						key={timeline.id}
-						timelineId={timeline.id}
-						name={timeline.name}
-						tasks={timeline.tasks}
-						person={person}
-						range={{ start, end }}
-						onTaskDurationChange={(taskId, newEndDate) => onTaskDurationChange(timeline.id, taskId, newEndDate)}
-						onTaskStartTimeChange={(taskId, newStartDate, newEndDate) => onTaskStartTimeChange(timeline.id, taskId, newStartDate, newEndDate)}
-						onTaskCreate={onTaskCreate}
-						onTaskDelete={onTaskDelete}
-						onDeleteTimeline={() => onDeleteTimeline(timeline.id)}
-						onRenameTimeline={() => onRenameTimeline(timeline.id)}
-					/>
+					<div key={timeline.id} style={{ marginBottom: "0.5rem" }}>
+						<label style={{ cursor: "pointer", display: "flex", alignItems: "center" }}>
+							<input
+								type="checkbox"
+								checked={visibleTimelineIds.has(timeline.id)}
+								onChange={(e) => {
+									setVisibleTimelineIds((prev) => {
+										const newSet = new Set(prev);
+										if (e.target.checked) {
+											newSet.add(timeline.id);
+										} else {
+											newSet.delete(timeline.id);
+										}
+										return newSet;
+									});
+								}}
+								style={{ cursor: "pointer" }}
+							/>
+							<span style={{ marginLeft: 8 }}>{timeline.name}</span>
+						</label>
+					</div>
 				))}
+				<div
+					style={{
+						position: "absolute",
+						top: 0,
+						right: 0,
+						bottom: 0,
+						width: "10px",
+						cursor: "ew-resize",
+						zIndex: 101,
+					}}
+					onMouseDown={(e) => {
+						e.preventDefault();
+						setIsResizing(true);
+					}}
+				/>
+			</div>
+
+			{/* Main Content Area */}
+			<div style={{ marginLeft: `${sidebarWidth}px`, width: "100%", padding: "0 2rem" }}>
+				<h1>Calendar Timeline - Pending Tasks for {person}</h1>
+				<p style={{ textAlign: 'center', color: '#666', fontSize: '0.9em' }}>
+					Click and drag on the calendar grid to create meetings/tasks. Drag tasks to move them.
+				</p>
+				<div style={{ marginBottom: "1rem" }}>
+					<button
+						onClick={goToToday}
+						style={{
+							marginRight: 8,
+							padding: "4px 12px",
+							cursor: "pointer",
+							background: "#2196F3",
+							color: "white",
+							border: "none",
+							borderRadius: "4px",
+						}}
+					>
+						Today
+					</button>
+					<button
+						onClick={goToPreviousDay}
+						style={{
+							marginRight: 8,
+							padding: "4px 12px",
+							cursor: "pointer",
+						}}
+					>
+						← Previous Day
+					</button>
+					<label style={{ marginRight: 8 }}>
+						<input
+							type="date"
+							value={startDate}
+							onChange={(e) => setStartDate(e.target.value)}
+						/>
+					</label>
+					<button
+						onClick={goToNextDay}
+						style={{
+							marginRight: 12,
+							padding: "4px 12px",
+							cursor: "pointer",
+						}}
+					>
+						Next Day →
+					</button>
+					{RANGE_OPTIONS.map((opt) => (
+						<button
+							key={opt}
+							onClick={() => setRange(opt)}
+							style={{
+								marginRight: 8,
+								fontWeight: range === opt ? "bold" : "normal",
+								background: range === opt ? "#e0e0e0" : undefined,
+							}}
+						>
+							{opt.charAt(0).toUpperCase() + opt.slice(1)}
+						</button>
+					))}
+					<button
+						onClick={onAddTimeline}
+						style={{
+							marginLeft: 16,
+							padding: "4px 12px",
+							background: "#4CAF50",
+							color: "white",
+							border: "none",
+							borderRadius: "4px",
+							cursor: "pointer",
+						}}
+					>
+						+ Add Timeline
+					</button>
+					<button
+						onClick={resetToDefaults}
+						style={{
+							marginLeft: 8,
+							padding: "4px 12px",
+							background: "#ff6b6b",
+							color: "white",
+							border: "none",
+							borderRadius: "4px",
+							cursor: "pointer",
+						}}
+					>
+						Reset to Defaults
+					</button>
+				</div>
+				<div
+					ref={timelinesContainerRef}
+					style={{
+						display: "flex",
+						justifyContent: "flex-start",
+						gap: "2rem",
+						marginTop: "2rem",
+						overflowX: "auto",
+						overflowY: "hidden",
+						paddingBottom: "1rem",
+					}}
+				>
+					{timelines.map((timeline) => (
+						visibleTimelineIds.has(timeline.id) && (
+							<Timeline
+								key={timeline.id}
+								timelineId={timeline.id}
+								name={timeline.name}
+								tasks={timeline.tasks}
+								person={person}
+								range={{ start, end }}
+								onTaskDurationChange={(taskId, newEndDate) => onTaskDurationChange(timeline.id, taskId, newEndDate)}
+								onTaskStartTimeChange={(taskId, newStartDate, newEndDate) => onTaskStartTimeChange(timeline.id, taskId, newStartDate, newEndDate)}
+								onTaskCreate={onTaskCreate}
+								onTaskDelete={onTaskDelete}
+								onDeleteTimeline={() => onDeleteTimeline(timeline.id)}
+								onRenameTimeline={() => onRenameTimeline(timeline.id)}
+							/>
+						)
+					))}
+				</div>
 			</div>
 		</div>
 	);
